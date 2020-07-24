@@ -5,10 +5,31 @@
 import json
 import dateutil.parser
 import babel
-from flask import Flask, render_template, request, Response, flash, redirect, url_for
+from flask import (
+   Flask,
+   render_template, 
+   request, Response,
+   flash,
+   redirect, 
+   url_for
+)
+from models import (
+    db, 
+    Venue,
+    Artist,
+    Show
+)
 from flask_moment import Moment
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Column, String, Integer, Boolean, DateTime, ARRAY, ForeignKey
+from sqlalchemy import (
+    Column, 
+    String, 
+    Integer, 
+    Boolean, 
+    DateTime,
+    ARRAY, 
+    ForeignKey
+)    
 from flask_migrate import Migrate
 import logging
 from logging import Formatter, FileHandler
@@ -31,179 +52,7 @@ migrate = Migrate(app, db)
 def db_setup(app):
     return db
 
-
-# TODO: connect to a local postgresql database
-
-#----------------------------------------------------------------------------#
-# Models.
-#----------------------------------------------------------------------------#
-
-class Venue(db.Model):
-    __tablename__ = 'Venue'
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String)
-    city = db.Column(db.String(120))
-    state = db.Column(db.String(120))
-    address = db.Column(db.String(120))
-    phone = db.Column(db.String(120))
-    image_link = db.Column(db.String(500))
-    facebook_link = db.Column(db.String(120))
-    website = db.Column(db.String(120))
-    seeking_talent = db.Column(db.Boolean, default=False)
-    seeking_description=db.Column(db.String(120),default='')
-    genres = db.Column(ARRAY(String))
-    shows = db.relationship('Show', backref='Venue', lazy='dynamic')
-
-    def __init__(self,name,genres,city,state,address,phone,image_link,facebook_link,website ,seeking_talent=False , seeking_description=""):
-      self.name=name
-      self.city=city
-      self.genres=genres
-      self.state=state
-      self.address=address
-      self.phone=phone
-      self.image_link=image_link
-      self.website = website
-      self.facebook_link=facebook_link
-      self.seeking_talent=seeking_talent
-      self.seeking_description=seeking_description
-     
-    def insert(self):
-        db.session.add(self)
-        db.session.commit()
-    def update(self):
-        db.session.commit()    
-
-    def short(self):
-        return{
-            'id': self.id,
-            'name':self.name,
-        }
-    def detail(self):
-        return{
-            'id' :self.id,
-            'name' :self.name,
-            'genres' : self.genres,
-            'address' :self.address,
-            'state' :self.state,
-            'city' :self.city,
-            'phone' :self.phone,
-            'website' :self.website,
-            'facebook_link':self.facebook_link,
-            'seeking_talent' :self.seeking_talent,
-            'image_link' :self.image_link,
-            'seeking_description' :self.seeking_description,
-        }
-    # TODO: implement any missing fields, as a database migration using Flask-Migrate
-
-class Artist(db.Model):
-    __tablename__ = 'Artist'
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String)
-    city = db.Column(db.String(120))
-    phone = db.Column(db.String(120))
-    genres = db.Column(db.String(120))
-    image_link = db.Column(db.String(500))
-    facebook_link = db.Column(db.String(120))
-    state = db.Column(db.String(120))
-    website = db.Column(db.String(120))
-    seeking_venue = db.Column(db.Boolean, default=False)
-    seeking_description = db.Column(db.String(120), default=' ')
-    shows = db.relationship('Show', backref='Artist', lazy=True)
-
-    def __init__(self,name,city,state,phone,genres,image_link,facebook_link,website,seeking_venue=False , seeking_description=" "):
-      self.name=name
-      self.city=city
-      self.state=state
-      self.phone=phone
-      self.genres=genres
-      self.image_link=image_link
-      self.facebook_link=facebook_link
-      self.website=website
-      self.seeking_venue=seeking_venue
-      self.seeking_description=seeking_description
-    def insert(self):
-        db.session.add(self)
-        db.session.commit()  
-    def update(self):
-        db.session.commit()
-
-    def detail(self):
-        return{
-            'id' :self.id,
-            'name' :self.name,
-            'city' :self.city,
-            'state' :self.state,
-            'phone' :self.phone,
-            'genres' : self.genres,            
-            'image_link' :self.image_link,
-            'facebook_link':self.facebook_link,
-            'website' :self.website,
-            'seeking_venue' :self.seeking_venue,
-            'seeking_description' :self.seeking_description,
-        }
-    def short(self):
-        return{
-            'id': self.id,
-            'name':self.name,
-        }    
-
-class Show(db.Model):
-
-    __tablename__ = 'Show'
-    id = db.Column(db.Integer,primary_key=True)
-    venue_id = db.Column(db.Integer, ForeignKey(Venue.id), nullable=False)
-    artist_id = db.Column(db.Integer, ForeignKey(Artist.id), nullable=False)
-    start_time = db.Column(db.String(), nullable=False)
-
-    def __init__(self,venue_id,artist_id,start_time):
-      self.venue_id=venue_id
-      self.artist_id=artist_id
-      self.start_time=start_time
-
-    def insert(self):
-        db.session.add(self)
-        db.session.commit()  
-
-    def detail(self):
-        return{
-            've nue_id' :self.venue_id,
-            'venue_name' :self.Venue.name,
-            'artist_id' :self.artist_id,
-            'artist_name' :self.Artist.name,
-            'artist_image_link' :self.Artist.image_link,
-            'start_time' :self.start_time
-        }
-    def artist_details(self):
-        return{
-            'artist_id' :self.venue_id,
-            'artist_name' :self.Artist.name,
-            'artist_image_link' :self.Artist.image_link,
-            'start_time' :self.start_time
-
-        }
-
-    def venue_details(self):
-        return{
-            'venue_id' :self.venue_id,
-            'venue_name' :self.Venue.name,
-            'venue_image_link' :self.Venue.image_link,
-            'start_time' :self.start_time
-            
-        }
-    
-
-
-    # TODO: implement any missing fields, as a database migration using Flask-Migrate
-
-# TODO Implement Show and Artist models, and complete all model relationships and properties, as a database migration.
-#----------------------------------------------------------------------------#
-# Filters.
-#----------------------------------------------------------------------------#
-
-
-
+#Fromate date and time 
 def format_datetime(value, format='medium'):
   date = dateutil.parser.parse(value)
   if format == 'full':
@@ -225,14 +74,14 @@ def index():
 
 #  Venues
 #  ----------------------------------------------------------------
-
+#Show All Venues 
 @app.route('/venues')
 def venues():
   current_time = datetime.now().strftime('%Y-%m-%d %H:%S:%M')
   venues = Venue.query.group_by(Venue.id, Venue.state, Venue.city).all()
   venue_state_and_city = ''
   data = []
-   
+
   for venue in venues:
     upcoming_shows = venue.shows.filter(Show.start_time > current_time).all()
     if venue_state_and_city == venue.city + venue.state:
@@ -258,7 +107,7 @@ def venues():
 
 @app.route('/venues/search', methods=['POST'])
 def search_venues():
-  print("hind")
+
   venue_query = Venue.query.filter(Venue.name.ilike('%' + request.form['search_term'] + '%'))
   venue_list = list(map(Venue.short, venue_query)) 
   response = {
@@ -266,7 +115,7 @@ def search_venues():
     "data": venue_list
   }
   return render_template('pages/search_venues.html', results=response, search_term=request.form.get('search_term', ''))
-
+#Show Specific Venue 
 @app.route('/venues/<int:venue_id>')
 def show_venue(venue_id):
   venue_query = Venue.query.get(venue_id)
@@ -291,12 +140,12 @@ def show_venue(venue_id):
 #  Create Venue
 #  ----------------------------------------------------------------
 
-@app.route('/venues/create', methods=['GET'])
+@app.route('/venues/create', methods=['GET'])#Load Page of create venue
 def create_venue_form():
   form = VenueForm()
   return render_template('forms/new_venue.html', form=form)
 
-@app.route('/venues/create', methods=['POST'])
+@app.route('/venues/create', methods=['POST'])#Save New Venues
 def create_venue_submission():
   try:
  
@@ -326,7 +175,7 @@ def create_venue_submission():
     print(e)
     flash('An error occurred. Venue ' + request.form['name'] + ' could not be Created.')
   return render_template('pages/home.html')
-
+#Delete selected Venue
 @app.route('/venues/<venue_id>', methods=['POST'])
 def delete_venue(venue_id):
   try:
@@ -344,6 +193,7 @@ def delete_venue(venue_id):
 
 #  Artists
 #  ----------------------------------------------------------------
+#Show all Atrits
 @app.route('/artists')
 def artists():
   artist_query = Artist.query.all()
@@ -358,7 +208,7 @@ def search_artists():
     "data": artist_list
   }
   return render_template('pages/search_artists.html', results=response, search_term=request.form.get('search_term', ''))
-
+#Show Detail of Selected Artist 
 @app.route('/artists/<int:artist_id>')
 def show_artist(artist_id):
   print(artist_id)
@@ -380,9 +230,9 @@ def show_artist(artist_id):
     return render_template('pages/show_artist.html', artist=artist_details)
   return render_template('errors/404.html')
 
-#  Update
+#  Update Of Artists 
 #  ----------------------------------------------------------------
-@app.route('/artists/<int:artist_id>/edit', methods=['GET'])
+@app.route('/artists/<int:artist_id>/edit', methods=['GET'])#Load Page of Edit Artist 
 def edit_artist(artist_id):
   form = ArtistForm(request.form)
   artist_data = Artist.query.get(artist_id)
@@ -401,7 +251,7 @@ def edit_artist(artist_id):
     return render_template('forms/edit_artist.html', form=form, artist=artist_details)
   return render_template('errors/404.html')
 
-@app.route('/artists/<int:artist_id>/edit', methods=['POST'])
+@app.route('/artists/<int:artist_id>/edit', methods=['POST'])#Save Edited Artist
 def edit_artist_submission(artist_id):  
     form = ArtistForm(request.form)
     artist_data = Artist.query.get(artist_id)
@@ -427,8 +277,8 @@ def edit_artist_submission(artist_id):
         return redirect(url_for('show_artist', artist_id=artist_id))
 
     return render_template('errors/404.html'), 404
-
-@app.route('/venues/<int:venue_id>/edit', methods=['GET'])
+#Edit of Venues Get and Post Methods
+@app.route('/venues/<int:venue_id>/edit', methods=['GET'])#Load Page of Edit Selected Venue
 def edit_venue(venue_id):
   form = VenueForm()
   venue_query = Venue.query.get(venue_id)
@@ -449,7 +299,7 @@ def edit_venue(venue_id):
     return render_template('forms/edit_venue.html', form=form, venue=venue_details)
   return render_template('errors/404.html')
 
-@app.route('/venues/<int:venue_id>/edit', methods=['POST'])
+@app.route('/venues/<int:venue_id>/edit', methods=['POST'])#save changes of selected Artist
 def edit_venue_submission(venue_id):
   form = VenueForm(request.form)
   venue_data = Venue.query.get(venue_id)
@@ -476,12 +326,12 @@ def edit_venue_submission(venue_id):
 #  Create Artist
 #  ----------------------------------------------------------------
 
-@app.route('/artists/create', methods=['GET'])
+@app.route('/artists/create', methods=['GET'])#Load Page Of Edit Artist
 def create_artist_form():
   form = ArtistForm()
   return render_template('forms/new_artist.html', form=form)
 
-@app.route('/artists/create', methods=['POST'])
+@app.route('/artists/create', methods=['POST'])#save changes 
 def create_artist_submission():
   try:
 
@@ -511,20 +361,19 @@ def create_artist_submission():
 
 
 #  Shows
-#  ----------------------------------------------------------------
-
+#  ---------------------------------------------------------------
 @app.route('/shows')
 def shows():
   show_query = Show.query.options(db.joinedload(Show.Venue), db.joinedload(Show.Artist)).all()
   data = list(map(Show.detail, show_query))
   return render_template('pages/shows.html', shows=data)
-
+#create show time
 @app.route('/shows/create')
-def create_shows():
+def create_shows():#Load Form
   # renders form. do not touch.
   form = ShowForm()
   return render_template('forms/new_show.html', form=form)
-
+#save Show Time 
 @app.route('/shows/create', methods=['POST'])
 def create_show_submission():
   
